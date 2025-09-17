@@ -41,3 +41,9 @@ Főmenü: Általános rendszerbeállítások
 Hálózati menü: Minden hálózattal kapcsolatos funkció (telepítés, konfiguráció, hibajavítás)
 A funkcionalitás ugyanaz maradt, csak az elrendezés lett professzionálisabb és felhasználóbarátabb!
 
+Használat:
+
+A szkriptet a következőképpen kell használni:
+Mentse el a kódot egy fájlba, deb13conf.sh.
+Tegye futtathatóvá a fájlt a chmod +x deb13conf.sh paranccsal.
+Futtassa a szkriptet sudo ./deb13conf.sh paranccsal. A szkript root jogosultságot igényel.
