@@ -23,7 +23,7 @@ check_compatibility() {
 # --- Főmenü funkció ---
 main_menu() {
     clear
-    echo "✨ Üdvözöllek a ClamAV menüjében! ✨"
+    echo "✨Üdvözöllek a ClamAV menüjében! Complex IT Group @ Kispest 2025✨"
     echo "---"
     echo "Kérlek, válassz egy opciót:"
     echo "0. ClamAV telepítése (ha még nincs telepítve)"
