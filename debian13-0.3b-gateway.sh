@@ -63,7 +63,7 @@ main_menu() {
     while true; do
         clear
         echo "---------------------------------------------------"
-        echo "Komplex hálózati és tűzfal konfigurátor Béta!!!"
+        echo "Komplex hálózati és tűzfal konfigurátor Complex IT Group @ Kispest 2025 Béta!!!"
         echo "---------------------------------------------------"
         echo "1. Egyszerű tűzfal beállítás (Filtering)"
         echo "2. Komplett tűzfal (NAT, Port Forwarding, stb.)"
@@ -116,9 +116,11 @@ setup_simple_firewall() {
     echo "A tűzfal szabályok beállítása..."
     nft flush ruleset
     nft add table ip filter
-    nft add chain ip filter input { type filter hook input priority 0; policy drop; }
-    nft add chain ip filter output { type filter hook output priority 0; policy accept; }
-    nft add chain ip filter forward { type filter hook forward priority 0; policy drop; }
+    
+    # JAVÍTOTT SOROK - idézőjelek használata a kapcsos zárójelek körül
+    nft 'add chain ip filter input { type filter hook input priority 0; policy drop; }'
+    nft 'add chain ip filter output { type filter hook output priority 0; policy accept; }'
+    nft 'add chain ip filter forward { type filter hook forward priority 0; policy drop; }'
 
     nft add rule ip filter input iif lo accept comment "loopback"
     nft add rule ip filter input ct state established,related accept comment "meglévő kapcsolatok"
@@ -133,7 +135,7 @@ setup_simple_firewall() {
         local port=$(echo "$address" | awk -F':' '{print $NF}')
 
         if [[ "$port" =~ ^[0-9]+$ ]]; then
-            echo "   $i. Észlelt szolgáltatás a $port porton ($proto)."
+            echo "    $i. Észlelt szolgáltatás a $port porton ($proto)."
             service_list+=("$port:$proto")
             i=$((i+1))
         fi
@@ -221,7 +223,7 @@ setup_nat_forwarding() {
     # Masquerading (SNAT) beállítása
     echo "Masquerading beállítása..."
     nft add table ip nat 2>/dev/null
-    nft add chain ip nat postrouting { type nat hook postrouting priority 100\; } 2>/dev/null
+    nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' 2>/dev/null
     nft add rule ip nat postrouting oif "$external_if" masquerade comment "masquerade"
     echo "✅ A belső hálózat már képes internetezni a $external_if interfészen keresztül."
 
@@ -238,7 +240,7 @@ setup_nat_forwarding() {
         
         echo "Példa: a külső $external_port portra érkező forgalmat a belső $internal_ip cím $internal_port portjára irányítjuk át."
         nft add table ip nat 2>/dev/null
-        nft add chain ip nat prerouting { type nat hook prerouting priority -100\; } 2>/dev/null
+        nft 'add chain ip nat prerouting { type nat hook prerouting priority -100; }' 2>/dev/null
         nft add rule ip nat prerouting iif "$external_if" meta l4proto "$protocol" dport "$external_port" dnat to "$internal_ip":"$internal_port"
         echo "✅ Port Forwarding beállítva."
     done
@@ -253,8 +255,8 @@ setup_hairpin_nat() {
     read -p "Add meg a belső szerver IP-címét: " server_ip
     echo "Magyarázat: A belső hálózatról a külső IP címen keresztül is eléred a szolgáltatásaidat."
     nft add table ip nat 2>/dev/null
-    nft add chain ip nat prerouting { type nat hook prerouting priority -100\; } 2>/dev/null
-    nft add chain ip nat postrouting { type nat hook postrouting priority 100\; } 2>/dev/null
+    nft 'add chain ip nat prerouting { type nat hook prerouting priority -100; }' 2>/dev/null
+    nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' 2>/dev/null
     nft add rule ip nat prerouting iif "$internal_if" ip daddr "$public_ip" dnat to "$server_ip"
     nft add rule ip nat postrouting iif "$internal_if" ip daddr "$server_ip" masquerade
     echo "✅ Hairpin NAT beállítva."
@@ -268,8 +270,8 @@ setup_1_to_1_nat() {
     read -p "Add meg a belső (privát) IP-címet: " private_ip
     echo "Példa: A külső $public_ip cím minden forgalma a belső $private_ip címre lesz átirányítva."
     nft add table ip nat 2>/dev/null
-    nft add chain ip nat prerouting { type nat hook prerouting priority -100\; } 2>/dev/null
-    nft add chain ip nat postrouting { type nat hook postrouting priority 100\; } 2>/dev/null
+    nft 'add chain ip nat prerouting { type nat hook prerouting priority -100; }' 2>/dev/null
+    nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' 2>/dev/null
     nft add rule ip nat prerouting dnat to "$private_ip"
     nft add rule ip nat postrouting snat to "$public_ip"
     echo "✅ 1:1 NAT beállítva."
@@ -280,7 +282,7 @@ setup_1_to_1_nat() {
 l2tp_vpn_menu() {
     clear
     echo "---------------------------------------------------"
-    echo "      3. L2TP/IPsec VPN konfiguráció"
+    echo "       3. L2TP/IPsec VPN konfiguráció"
     echo "---------------------------------------------------"
     echo "0. Függőségek telepítése (strongswan, xl2tpd, nft)"
     echo "1. VPN szerver beállítások (IPsec és L2TP)"
@@ -314,21 +316,21 @@ setup_l2tp_vpn() {
     # ipsec.conf
     cat <<EOF > /etc/ipsec.conf
 config setup
-  charondebug="ike 2, knl 2, cfg 2, net 2, esp 2, dmn 2, mgr 2"
+    charondebug="ike 2, knl 2, cfg 2, net 2, esp 2, dmn 2, mgr 2"
 conn L2TP-IPsec
-  left=%defaultroute
-  leftsubnet=0.0.0.0/0
-  leftauth=psk
-  right=%any
-  rightsubnet=10.0.1.0/24
-  rightauth=psk
-  ike=aes256-sha256-modp2048
-  esp=aes256-sha256
-  auto=add
-  keyexchange=ikev1
-  dpdaction=restart
-  dpdtimeout=180s
-  forceencaps=yes
+    left=%defaultroute
+    leftsubnet=0.0.0.0/0
+    leftauth=psk
+    right=%any
+    rightsubnet=10.0.1.0/24
+    rightauth=psk
+    ike=aes256-sha256-modp2048
+    esp=aes256-sha256
+    auto=add
+    keyexchange=ikev1
+    dpdaction=restart
+    dpdtimeout=180s
+    forceencaps=yes
 EOF
     if [ $? -ne 0 ]; then echo "❌ Hiba: nem sikerült létrehozni az /etc/ipsec.conf fájlt."; return; fi
 
@@ -339,14 +341,14 @@ EOF
     # xl2tpd.conf
     cat <<EOF > /etc/xl2tpd/xl2tpd.conf
 [global]
-  port = 1701
+    port = 1701
 [lns default]
-  ip range = $l2tp_ip_range
-  local ip = $public_ip
-  require authentication = yes
-  name = L2TP-IPsec-VPN
-  ppp debug = yes
-  pppoptfile = /etc/ppp/options.xl2tpd
+    ip range = $l2tp_ip_range
+    local ip = $public_ip
+    require authentication = yes
+    name = L2TP-IPsec-VPN
+    ppp debug = yes
+    pppoptfile = /etc/ppp/options.xl2tpd
 EOF
     if [ $? -ne 0 ]; then echo "❌ Hiba: nem sikerült létrehozni az /etc/xl2tpd/xl2tpd.conf fájlt."; return; fi
 
@@ -401,7 +403,7 @@ setup_vpn_nat() {
     
     # Masquerading a külső hálózat felé
     nft add table ip nat 2>/dev/null
-    nft add chain ip nat postrouting { type nat hook postrouting priority 100\; } 2>/dev/null
+    nft 'add chain ip nat postrouting { type nat hook postrouting priority 100; }' 2>/dev/null
     nft add rule ip nat postrouting ip saddr "$vpn_subnet" oifname "$external_if" masquerade
     if [ $? -ne 0 ]; then echo "❌ Hiba: A külső NAT szabály hozzáadása sikertelen."; return; fi
     
@@ -415,7 +417,7 @@ setup_vpn_nat() {
 dhcp_server_menu() {
     clear
     echo "---------------------------------------------------"
-    echo "      4. DHCP Szerver beállítások"
+    echo "       4. DHCP Szerver beállítások"
     echo "---------------------------------------------------"
     echo "0. Függőségek telepítése (isc-dhcp-server, tftpd-hpa, vlan)"
     echo "1. DHCP szerver beállítása (LAN/VLAN)"
@@ -456,11 +458,11 @@ setup_dhcp_server() {
 
     cat <<EOF > /etc/dhcp/dhcpd.conf
 subnet $subnet netmask $netmask {
-  range $range_start $range_end;
-  option routers $router;
-  option domain-name-servers $dns;
-  default-lease-time $lease_time;
-  max-lease-time $((lease_time * 2));
+    range $range_start $range_end;
+    option routers $router;
+    option domain-name-servers $dns;
+    default-lease-time $lease_time;
+    max-lease-time $((lease_time * 2));
 }
 EOF
     if [ $? -ne 0 ]; then echo "❌ Hiba: nem sikerült a dhcpd.conf fájl létrehozása."; return; fi
@@ -546,7 +548,7 @@ EOF
 squid_menu() {
     clear
     echo "---------------------------------------------------"
-    echo "      5. Squid és SquidGuard beállítások"
+    echo "       5. Squid és SquidGuard beállítások"
     echo "---------------------------------------------------"
     echo "0. Függőségek telepítése (squid, squidguard, curl, gnupg)"
     echo "1. Átlátszó proxy beállítása (Transparent Proxy)"
@@ -577,7 +579,7 @@ setup_transparent_proxy() {
     squid_port=${squid_port:-3128}
     
     nft add table ip nat 2>/dev/null
-    nft add chain ip nat prerouting { type nat hook prerouting priority -100\; } 2>/dev/null
+    nft 'add chain ip nat prerouting { type nat hook prerouting priority -100; }' 2>/dev/null
     nft add rule ip nat prerouting iif "$internal_if" tcp dport 80 redirect to "$squid_port" comment "HTTP forgalom átirányítása"
     echo "✅ HTTP forgalom átirányítva a Squid proxyra."
     echo "A Squid proxy portja: **$squid_port** (TCP)"
@@ -593,7 +595,7 @@ create_pac_file() {
     proxy_port=${proxy_port:-3128}
 
     local pac_content="function FindProxyForURL(url, host) {
-  return \"PROXY $proxy_ip:$proxy_port; DIRECT\";
+    return \"PROXY $proxy_ip:$proxy_port; DIRECT\";
 }"
     
     echo "$pac_content" > /var/www/html/proxy.pac
@@ -615,25 +617,25 @@ setup_squidguard() {
     read -p "Választás: " choice
     case $choice in
         1) read -p "A Shalla's Blacklists letöltése és kicsomagolása. Folytatod? (igen/nem) " -n 1 -r
-           echo
-           if [[ $REPLY =~ ^[Ii]gen$ ]]; then
-               wget -c http://www.shallalist.de/Downloads/shallalist.tar.gz -O /tmp/shallalist.tar.gz
-               if [ $? -ne 0 ]; then echo "❌ Hiba: A blacklist letöltése sikertelen."; return; fi
-               tar -xvzf /tmp/shallalist.tar.gz -C /var/lib/squidguard/db/
-               if [ $? -ne 0 ]; then echo "❌ Hiba: A blacklist kicsomagolása sikertelen."; return; fi
-               echo "✅ A blacklist letöltve."
-           fi
-           ;;
+            echo
+            if [[ $REPLY =~ ^[Ii]gen$ ]]; then
+                wget -c http://www.shallalist.de/Downloads/shallalist.tar.gz -O /tmp/shallalist.tar.gz
+                if [ $? -ne 0 ]; then echo "❌ Hiba: A blacklist letöltése sikertelen."; return; fi
+                tar -xvzf /tmp/shallalist.tar.gz -C /var/lib/squidguard/db/
+                if [ $? -ne 0 ]; then echo "❌ Hiba: A blacklist kicsomagolása sikertelen."; return; fi
+                echo "✅ A blacklist letöltve."
+            fi
+            ;;
         2)
-           echo "A /etc/squidguard/squidGuard.conf fájl manuális szerkesztést igényel."
-           echo "Példa a beállításra:"
-           echo 'acl {'
-           echo '    default {'
-           echo '        pass !phishing !porno !gambling all'
-           echo '    }'
-           echo '}'
-           read -n 1 -s -r -p "Nyomj Entert a folytatáshoz."
-           ;;
+            echo "A /etc/squidguard/squidGuard.conf fájl manuális szerkesztést igényel."
+            echo "Példa a beállításra:"
+            echo 'acl {'
+            echo '    default {'
+            echo '        pass !phishing !porno !gambling all'
+            echo '    }'
+            echo '}'
+            read -n 1 -s -r -p "Nyomj Entert a folytatáshoz."
+            ;;
         3) ;;
         *) echo "Érvénytelen választás."; read -n 1 -s -r -p "Nyomj Entert a folytatáshoz." ;;
     esac
@@ -643,7 +645,7 @@ setup_squidguard() {
 install_webmin_menu() {
     clear
     echo "---------------------------------------------------"
-    echo "      6. Webmin telepítése"
+    echo "       6. Webmin telepítése"
     echo "---------------------------------------------------"
     echo "A Webmin egy web alapú interfész a rendszeradminisztrációhoz. A telepítéshez root jogok szükségesek."
     echo "1. Webmin telepítése"
