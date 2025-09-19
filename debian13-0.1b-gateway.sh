@@ -63,7 +63,7 @@ main_menu() {
     while true; do
         clear
         echo "---------------------------------------------------"
-        echo "        Komplex hálózati és tűzfal konfigurátor"
+        echo "Komplex hálózati és tűzfal konfigurátor Béta!!!"
         echo "---------------------------------------------------"
         echo "1. Egyszerű tűzfal beállítás (Filtering)"
         echo "2. Komplett tűzfal (NAT, Port Forwarding, stb.)"
