@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # FreeBSD 14 Beállító Szkript - V3.0 (Javított és Optimalizált)
-# Teljesen újraírt verzió FreeBSD 12 verzióból hibajavításokkal
+# Teljesen újraírt verzió FreeBSD 12 változattból
 
 # Ellenőrizzük, hogy a szkript root felhasználóként fut-e
 if [ "$(id -u)" -ne 0 ]; then
