@@ -47,35 +47,6 @@ lang_get() {
 # --- SEGÉDFUNKCIÓK ---
 
 install_dependencies() {
-    # ... (A teljes segédfüggvény, a lang_get() használatával)
-    # Ez a rész a teljesség kedvéért egyszerűsítve van, a fenti példa mutatja a logikát.
-    # A lenti szkriptben a magyar szövegek vannak közvetlenül.
-}
-
-# ... (Itt jönnének a többi segédfüggvények, mint a check_network_manager, save_nft_rules)
-
-# --- TELJES SZKRIPT ---
-# A lenti szkript a könnyebb olvashatóság kedvéért közvetlen magyar szövegeket használ.
-
-#!/bin/bash
-
-# A szkript futtatásához root jogok szükségesek.
-if [ "$EUID" -ne 0 ]; then
-  echo "Kérlek, futtasd a szkriptet 'sudo' paranccsal."
-  exit 1
-fi
-
-################################################################################
-#                                                                              #
-#               Komplex Hálózati & Tűzfal Konfigurátor v2.1 beta               #
-#       Fejlesztve a Debian 13 "Trixie" rendszerhez, Kea DHCP támogatással.    #
-#               Minden eredeti funkciót tartalmaz, javítva és bővítve.         #
-#                                                                              #
-################################################################################
-
-# --- FÜGGŐSÉGEK ÉS HÁLÓZATI ELLENŐRZÉS ---
-
-install_dependencies() {
     local dependencies=("$@")
     local missing_deps=()
     for dep in "${dependencies[@]}"; do
