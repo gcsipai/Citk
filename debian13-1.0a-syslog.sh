@@ -139,7 +139,7 @@ function main_menu() {
   while true; do
     clear
     echo "------------------------------------------------"
-    echo "Debian Rsyslog Konfigurátor 1.0a Complex IT Group @ Kispest"
+    echo "Debian Rsyslog Konfigurátor 1.0a Citk 2025"
     echo "------------------------------------------------"
     echo "1. Rsyslog telepítése (ha nincs telepítve)"
     echo "2. Helyi log konfiguráció megtekintése"
