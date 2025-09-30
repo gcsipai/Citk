@@ -2,7 +2,7 @@
 
 # Enterprise Linux 10 Configuration Script 2.2
 # Optimized for CentOS 10, RHEL 10, Rocky Linux 10, AlmaLinux 10
-# Complex IT Group @ Kispest 2025
+# Citk 2025
 
 # Ellenőrizzük, hogy a szkript root felhasználóként fut-e
 if [ "$EUID" -ne 0 ]; then
