@@ -10,7 +10,7 @@ fi
 show_main_menu() {
     clear
     echo "========================================="
-    echo "Debian 13 Beállító Szkript  1.4 Complex IT Group @ Kispest 2025"
+    echo "Debian 13 Beállító Szkript  1.4 Citk 2025"
     echo "========================================="
     echo "1. Csomagforrások konfigurálása"
     echo "2. Rendszer frissítése (apt update & upgrade)"
