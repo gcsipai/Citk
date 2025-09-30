@@ -114,7 +114,7 @@ show_main_menu() {
     echo "========================================="
     echo "    Enterprise Linux 10 Config Script 2.2"
     echo "    Optimized for: $DISTRO $DISTRO_VERSION"
-    echo "    Complex IT Group @ Kispest 2025"
+    echo "    Citk 2025"
     echo "========================================="
     echo "1.  Rendszer frissítése (dnf update & upgrade)"
     echo "2.  Alapvető alkalmazások telepítése"
