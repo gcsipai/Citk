@@ -5,7 +5,7 @@
 # Verzió: 4.2 Citk 2025 (Apache2-specifikus, adatbázis-mentéssel)
 #
 # Főbb bővítések:
-#   - MariaDB telepítés és konfiguráció pótolva/javítva.
+#   - MariaDB telepítés és konfiguráció.
 #   - Root jelszókezelés beépítve.
 #   - Apache2 támogatás a phpMyAdmin-hoz.
 #   - Dedikált adatbázis-mentési/visszaállítási menü WDB formátumban.
