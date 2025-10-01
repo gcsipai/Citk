@@ -2,7 +2,7 @@
 # ==============================================================================
 # MariaDB Telepítő és Kezelő Szkript
 # Készült: Debian 12/13 és Ubuntu 22.04+ rendszerekhez
-# Verzió: 4.2 (Apache2-specifikus, adatbázis-mentéssel)
+# Verzió: 4.2 Citk 2025 (Apache2-specifikus, adatbázis-mentéssel)
 #
 # Főbb bővítések:
 #   - MariaDB telepítés és konfiguráció pótolva/javítva.
