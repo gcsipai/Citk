@@ -1,4 +1,4 @@
-# Podman Kezelő Szkript (podman_manager_final.sh)
+# Podman Kezelő Szkript (debian13-2.1.podman.sh)
 
 **Verzió:** 2.1
 **Cél:** Egyszerűsített telepítés, konfiguráció, és menedzsment a **Podman** konténer motorhoz, kiemelt figyelemmel a **rootless** (jogosultság nélküli) beállításokra és a **Docker kompatibilitásra** Debian 13 (Trixie) rendszereken.
@@ -22,14 +22,14 @@ A szkript a **normál felhasználó** nevében állítja be a rootless funkciók
 
 ## 💾 Telepítés és Futtatás
 
-1.  **Mentés:** Mentsd el a szkriptet egy fájlba (pl. `podman_manager_final.sh`).
+1.  **Mentés:** Mentsd el a szkriptet egy fájlba (pl. `debian13-2.1.podman.sh`).
 2.  **Futtathatóvá tétel:** Adj futtatási jogosultságot a fájlnak:
     ```bash
-    chmod +x podman_manager_final.sh
+    chmod +x debian13-2.1.podman.sh
     ```
 3.  **Futtatás:** Indítsd el a szkriptet root jogosultsággal:
     ```bash
-    sudo ./podman_manager_final.sh
+    sudo ./debian13-2.1.podman.sh
     ```
 
 ---
