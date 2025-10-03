@@ -1,67 +1,68 @@
-Ez a szkript egy interaktív Bash program, amelyet a ClamAV víruskereső telepítésére, kezelésére és futtatására terveztek Debian/Ubuntu-alapú rendszereken. A szkript számos funkcióval rendelkezik, amelyek megkönnyítik a víruskereső használatát és karbantartását.
+# ClamAV Telepítő és Kezelő Eszköz (Bash Szkript)
 
-Főbb funkciók és működés
-A szkript a következő főbb funkciókat látja el, amelyek mind a felhasználó visszajelzései és javítási kérései alapján lettek finomítva:
+## 🎯 Áttekintés
 
-Telepítés menüből: Egyszerű és automatizált telepítési folyamat, amely kezeli a függőségeket, a konfigurációt és a szolgáltatások indítását.
+Ez a szkript egy **interaktív Bash program**, amelyet a **ClamAV** víruskereső telepítésére, kezelésére és futtatására terveztek **Debian/Ubuntu-alapú rendszereken**. A szkript célja, hogy megkönnyítse a víruskereső használatát és karbantartását egy átlátható menürendszeren keresztül.
 
-Fejlett víruskeresés: Kétféle vizsgálat közül választhatsz: a teljes rendszer vagy egy adott mappa átvizsgálása. A szkript rákérdez, hogy a talált fertőzött fájlokat karanténba helyezze-e egy külön mappába.
+A szkript a felhasználói visszajelzések alapján lett finomítva, különös hangsúlyt fektetve a **folyamatjelzésre** és a **hibatűrő adatbázis-frissítésre**.
 
-Folyamatjelzés: Mivel a víruskeresés sokáig tarthat, a szkript egy vizuális folyamatjelzőt (ún. "spinnert") jelenít meg a képernyőn, hogy a felhasználó lássa, a szkript nem fagyott le.
+---
 
-Adatbázis frissítés: A szkript egyetlen paranccsal frissíti a vírusadatbázist, és automatikusan kezeli a gyakran előforduló naplófájl-zárolási hibákat is.
+## 🚀 Főbb Funkciók és Működés
 
-Szolgáltatások leállítása: Lehetővé teszi a ClamAV háttérfolyamatainak biztonságos leállítását, anélkül, hogy a teljes programot eltávolítaná.
+| Funkció | Leírás | Előny/Jellemző |
+| :--- | :--- | :--- |
+| **Telepítés** | Egyszerű, menüből indítható, **automatizált telepítési folyamat**. | Kezeli a függőségeket, a konfigurációt és a szolgáltatások indítását (0. menüpont). |
+| **Fejlett Vizsgálat** | Kétféle vizsgálat: **teljes rendszer** vagy **adott mappa** átvizsgálása. | Interaktív kérdés a talált fertőzött fájlok **karanténba helyezéséről** (`/var/lib/clamav/quarantine`). |
+| **Folyamatjelzés** | Hosszú vizsgálatok alatt egy **vizuális folyamatjelző** (ún. "spinner") forog a képernyőn. | Megakadályozza, hogy a felhasználó azt higgye, a program lefagyott. |
+| **Adatbázis Frissítés** | Egyetlen paranccsal frissíti a vírusadatbázist (`freshclam`). | Automatikusan **kezeli a gyakori naplófájl-zárolási hibákat** a szolgáltatás leállításával/újraindításával. |
+| **Szolgáltatások Leállítása** | Lehetővé teszi a ClamAV háttérfolyamatainak biztonságos leállítását. | Karbantartáshoz vagy ideiglenes szüneteltetéshez hasznos (nem távolítja el a programot). |
 
-Részletes leírás
-1. Kompatibilitás ellenőrzése
-A szkript futtatásakor elsőként ellenőrzi, hogy a rendszer a népszerű apt csomagkezelőt használja-e. Ha nem, hibával leáll, megelőzve ezzel a kompatibilitási problémákat. Továbbá megköveteli a root jogokat (sudo), ami elengedhetetlen a rendszer szintű változtatásokhoz.
+---
 
-2. Főmenü és navigáció
-A szkript indítása után egy letisztult, számozott menü jelenik meg, amely a fő funkciókat kínálja. A navigáció egyszerű, a kívánt opció számának beírásával történik. A visszajelzésekhez a szkript vizuális piktogramokat használ (pl. ✅, 🚫), de maga a menü egyszerű szöveges formátumú.
+## 🛠️ Részletes Technikai Működés
 
-3. Telepítés és konfigurálás
-A 0. menüpont kiválasztásával a szkript elvégzi az alábbi lépéseket:
+### 1. Előfeltételek és Ellenőrzések
 
-Frissíti a rendszer csomaglistáját.
+* **Kompatibilitás**: Ellenőrzi az **`apt`** csomagkezelő meglétét. Ha nem találja, hibával leáll.
+* **Jogosultság**: Megköveteli a **root (sudo) jogok** használatát a rendszer szintű módosításokhoz.
 
-Telepíti a clamav csomagot.
+### 2. Telepítés és Konfigurálás (0. Menüpont)
 
-Automatikusan konfigurálja a ClamAV démon (clamd.conf) és a frissítő (freshclam.conf) fájljait.
+A telepítés menüpontja több kritikus lépést hajt végre:
 
-Beállítja a napló- és konfigurációs fájlok megfelelő jogosultságait.
+* Frissíti a rendszer csomaglistáját.
+* Telepíti a `clamav` csomagot.
+* **Automatikus konfiguráció**: Beállítja a `clamd.conf` (démon) és `freshclam.conf` (frissítő) fájlokat.
+* Beállítja a napló- és konfigurációs fájlok megfelelő jogosultságait.
+* Elindítja és engedélyezi a ClamAV szolgáltatásokat a **rendszerindításkor**.
+* Végrehajtja az első, **hibamentes** vírusadatbázis-frissítést.
 
-Elindítja és engedélyezi a ClamAV szolgáltatásokat a rendszerindításkor.
+### 3. Víruskeresési Funkciók (1. és 2. Menüpont)
 
-Automatikus vírusadatbázis-frissítést hajt végre, megoldva a korábbi, manuális frissítés során fellépő zárolási hibákat.
+A `perform_scan` funkció felel a vizsgálatokért:
 
-4. Víruskeresési funkciók
-A 1. és 2. menüpontok a vizsgálatokhoz tartoznak. Mindkét opció a perform_scan funkciót hívja meg, amely a következőket teszi:
+* **Karantén**: Ha a felhasználó kéri, létrehoz egy `quarantine` mappát a `/var/lib/clamav/` könyvtárban, ahová a fertőzött fájlokat helyezi.
+* **Naplózás**: A vizsgálat teljes eredménye a **`/var/log/clamav/clamav.log`** fájlba kerül.
+* **Visszajelzés**: A vizsgálat befejezésekor a szkript **összegzést** ad a talált fertőzésekről.
 
-Megkérdezi a felhasználót, hogy a fertőzött fájlokat helyezze-e karanténba. Ha igen a válasz, a szkript létrehoz egy quarantine mappát a /var/lib/clamav/ könyvtárban, és oda mozgatja a talált vírusokat.
+### 4. Adatbázis Frissítése (3. Menüpont)
 
-A vizsgálat futása alatt egy folyamatjelző ("spinner") forog a terminálban, megakadályozva, hogy a felhasználó azt higgye, a program lefagyott.
+A szkript garantálja, hogy a **`freshclam`** parancs ne ütközzön zárolási hibába:
+1.  **Leállítja** a háttérben futó automatikus frissítő szolgáltatást (`clamav-freshclam.service`).
+2.  Végrehajtja a frissítést.
+3.  **Újraindítja** a szolgáltatást a sikeres futás után.
 
-A vizsgálat befejezésekor összegzést ad a talált fertőzésekről.
+---
 
-Fontos: A vizsgálat teljes eredménye a /var/log/clamav/clamav.log fájlba kerül, ahol minden részlet megtalálható.
+## 🚀 A Szkript Használata
 
-5. Vírusadatbázis frissítése
-A 3. menüpont a vírusdefiníciók frissítésére szolgál. A szkript a freshclam parancsot használja, de mielőtt futtatná, leállítja a háttérben futó automatikus frissítő szolgáltatást (clamav-freshclam.service). Ez garantálja, hogy ne lépjen fel zárolási hiba, majd a sikeres frissítés után újraindítja a szolgáltatást.
-
-6. ClamAV szolgáltatások leállítása
-Az 5. menüpont lehetővé teszi, hogy leállítsd a háttérben futó ClamAV démonokat (clamav-daemon és clamav-freshclam). Ez akkor lehet hasznos, ha karbantartást szeretnél végezni, vagy valamilyen okból ideiglenesen szüneteltetnéd a víruskereső működését. Ez a funkció nem távolítja el a programot, csak leállítja a futó folyamatokat.
-
-A szkript használata
-Mentsd el a szkriptet egy fájlba, pl. debian13-1.1a-clamav.sh néven.
-
-Tedd futtathatóvá a fájlt a következő paranccsal:
-
-Bash
-
-chmod +x clamav_menu.sh
-Futtasd a szkriptet rendszergazdai (root) jogosultságokkal:
-
-Bash
-
-sudo ./debian13-1.1a-clamav.sh
+1.  **Mentés**: Mentsd el a szkriptet egy fájlba, pl. `clamav_menu.sh` néven.
+2.  **Futtathatóvá tétel**:
+    ```bash
+    chmod +x clamav_menu.sh
+    ```
+3.  **Futtatás (Root jogosultsággal)**:
+    ```bash
+    sudo ./clamav_menu.sh
+    ```
