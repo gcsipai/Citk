@@ -1,26 +1,29 @@
-A CITK egy, a Kispesti rendszergazdákat tömörítő, több éve működő közösség. Főként Linux alapú szerverek üzemeltetésével foglalkozunk.
-Ezekkel a projektekkel a kollégákat szeretnénk segíteni abban, hogy jobb, biztonságosabb és megbízhatóbb rendszereket üzemeltethessenek.
-Ezért a munkáért nem kérünk pénzt, és semmilyen anyagi juttatást sem fogadunk el.
+# 🧑‍💻 CITK - Kispesti Rendszergazdák Közössége
 
- channel tartalma a következő témákra fókuszál:
+## 🌟 Rólunk
 
-Szerveroldali Rendszerek és Scriptek 💻
-Rendszerüzemeltetés: Részletes útmutatók és tippek a népszerű szerver operációs rendszerekhez, mint a Debian, Red Hat és FreeBSD, valamint a Windows Server.
+A **CITK** egy több éve működő, a **Kispesti rendszergazdákat** tömörítő szakmai közösség. Főként **Linux alapú szerverek üzemeltetésével** foglalkozunk, de széles spektrumban támogatjuk a modern IT infrastruktúra kezelését.
 
-Automatizálás és Scriptek: Gyakorlatias scriptek és parancsfájlok Bash és PowerShell nyelven, amelyek segítik a napi rendszerfeladatok automatizálását és a hatékonyabb munkavégzést.
+Ezekkel a nyílt forrású projektekkel a kollégákat szeretnénk segíteni abban, hogy **jobb, biztonságosabb és megbízhatóbb** rendszereket üzemeltethessenek.
 
-Üzemeltetést Támogató Fejlesztés ⚙️
-Egyszerűsítő programok: Kisebb, üzemeltetést támogató alkalmazások és scriptek fejlesztése C#, Python és Delphi nyelveken, amelyek célja a rutinfeladatok megkönnyítése. Ezek az eszközök segítenek optimalizálni a munkafolyamatokat és csökkenteni a manuális beavatkozások szükségességét.
+**Fontos**: A közösségi munkánkért **nem kérünk pénzt**, és semmilyen anyagi juttatást sem fogadunk el. Célunk a tudásmegosztás és a szakmai támogatás.
 
-░██████╗░███╗░░██╗██████╗░██╗░░░░░░██████╗░░░░░░░░░░░██████╗░████████╗░██████╗░
-██╔════╝░████╗░██║██╔══██╗██║░░░░░██╔════╝░░░░░░░░░░██╔════╝░╚══██╔══╝██╔════╝░
-██║░░░░░░██╔██╗██║██████╔╝██║░░░░░╚█████╗░░░░░░░░░░░╚█████╗░░░░██║░░░░╚█████╗░░
-██║░░██╗░██║╚████║██╔══██╗██║░░░░░░╚═══██╗░░░░░░░░░░░╚═══██╗░░░██║░░░░░╚═══██╗░
-╚██████╔╝██║░╚███║██║░░██║███████╗██████╔╝░██╗██╗██╗██████╔╝░░░██║░░░░██████╔╝░
-░╚═════╝░╚═╝░░╚══╝╚═╝░░╚═╝╚══════╝╚═════╝░░╚═╝╚═╝╚═╝╚═════╝░░░░╚═╝░░░░╚═════╝░░
-░██████╗░██████╗░██╗░░░░░███████╗██████╗░░░░░░░██╗░░██╗██╗██████╗░███████╗████████╗
-██╔════╝░██╔══██╗██║░░░░░██╔════╝██╔══██╗░░░░░░╚██╗██╔╝██║██╔══██╗██╔════╝╚══██╔══╝
-██║░░██╗░██████╔╝██║░░░░░█████╗░░██████╔╝░░░░░░░╚███╔╝░██║██║░░██║█████╗░░░░██║░░░
-██║░░╚██╗██╔══██╗██║░░░░░██╔══╝░░██╔══██╗░░░░░░░██╔██╗░██║██║░░██║██╔══╝░░░░██║░░░
-╚██████╔╝██║░░██║███████╗███████╗██║░░██║░██╗░░██╔╝░╚██╗██║██████╔╝███████╗░░██║░░░
-░╚═════╝░╚═╝░░╚═╝╚══════╝╚══════╝╚═╝░░╚═╝░╚═╝░░╚═╝░░░╚═╝╚═╝╚═════╝░╚══════╝░░╚═╝░░░
+---
+
+## 💡 Fókuszterületek és Projektek
+
+A projektjeink és csatornáink tartalma az alábbi fő témákra fókuszál:
+
+### 💻 Szerveroldali Rendszerek és Scriptek
+
+| Téma | Tartalom |
+| :--- | :--- |
+| **Rendszerüzemeltetés** | Részletes útmutatók és tippek a népszerű szerver operációs rendszerekhez: **Debian, Red Hat, FreeBSD** és **Windows Server**. |
+| **Automatizálás és Scriptek** | Gyakorlatias scriptek és parancsfájlok **Bash** és **PowerShell** nyelven, amelyek segítik a napi rendszerfeladatok automatizálását és a hatékonyabb munkavégzést. |
+
+### ⚙️ Üzemeltetést Támogató Fejlesztés
+
+| Téma | Tartalom |
+| :--- | :--- |
+| **Egyszerűsítő programok** | Kisebb, üzemeltetést támogató alkalmazások és scriptek fejlesztése **C#, Python** és **Delphi** nyelveken. |
+| **Cél** | A rutin- és ismétlődő feladatok megkönnyítése, a munkafolyamatok optimalizálása és a manuális beavatkozások szükségességének csökkentése. |
