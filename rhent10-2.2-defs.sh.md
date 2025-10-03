@@ -1,105 +1,71 @@
-Enterprise Linux 10 Configuration Script 2.2
-📋 Áttekintés
-Ez egy átfogó rendszerkonfigurációs szkript, amelyet CentOS 10, RHEL 10, Rocky Linux 10 és AlmaLinux 10 disztribúciókhoz fejlesztettek ki. A szkript célja, hogy egyszerű és gyors módot biztosítson a legfontosabb rendszerbeállítások kezelésére egy egységes menürendszeren keresztül.
+# Enterprise Linux 10 Konfigurációs Szkript 2.2
 
-🎯 Fő célok
-Gyors rendszerbeállítás - Minden alapvető konfiguráció egy helyen
+## 📋 Áttekintés
 
-Időmegtakarítás - Manuális parancsok begépelése helyett menüalapú kezelés
+Ez egy **átfogó rendszerkonfigurációs szkript**, amelyet kifejezetten **CentOS 10**, **RHEL 10**, **Rocky Linux 10** és **AlmaLinux 10** disztribúciókhoz fejlesztettek ki.
 
-Hibatűrő működés - Automatikus hibakezelés és érvényesítés
+A szkript célja, hogy egyszerű és gyors módot biztosítson a legfontosabb rendszerbeállítások kezelésére egy **egységes menürendszeren** keresztül. Ideális választás minden olyan felhasználó számára, aki hatékonyan és biztonságosan szeretné kezelni Enterprise Linux alapú rendszereit anélkül, hogy mélyen elmerülne a parancssori eszközök használatában.
 
-Enterprise kompatibilitás - Kifejezetten vállalati Linux disztribúciókhoz optimalizálva
+---
 
-🚀 Főbb funkciók
-1. Csomagkezelés
-Rendszer frissítések (dnf update/upgrade)
+## 🎯 Fő célok
 
-Alapvető alkalmazások telepítése
+* **Gyors rendszerbeállítás**: Minden alapvető konfiguráció egy helyen.
+* **Időmegtakarítás**: Manuális parancsok begépelése helyett menüalapú kezelés.
+* **Hibatűrő működés**: Automatikus hibakezelés és érvényesítés.
+* **Enterprise kompatibilitás**: Kifejezetten vállalati Linux disztribúciókhoz optimalizálva.
 
-Monitorozó eszközök (htop, glances, iotop, stb.)
+---
 
-2. Hálózati konfiguráció
-NetworkManager alapú hálózatkezelés
+## 🚀 Főbb funkciók
 
-Statikus IP beállítás
+| Kategória | Funkciók |
+| :--- | :--- |
+| **Csomagkezelés** | Rendszer frissítések (`dnf update/upgrade`), Alapvető alkalmazások telepítése, Monitorozó eszközök (htop, glances, iotop, stb.) telepítése. |
+| **Hálózati konfiguráció** | NetworkManager alapú hálózatkezelés, Statikus IP beállítás, Hálózati diagnosztika és hibakezelés. |
+| **Biztonsági beállítások** | Tűzfal konfiguráció (FirewallD), SELinux beállítások, SSH biztonság (root login tiltása, port változtatás). |
+| **Rendszeradminisztráció** | Felhasználókezelés (létrehozás, törlés, sudo jogok), Hostnév beállítás, Cockpit webes felület telepítése. |
+| **Monitorozás és diagnosztika** | Rendszerinformációk megjelenítése, Hálózati állapot ellenőrzés, Szolgáltatások kezelése. |
 
-Hálózati diagnosztika és hibakezelés
+---
 
-3. Biztonsági beállítások
-Tűzfal konfiguráció (FirewallD)
+## 🛠️ Technikai előnyök
 
-SELinux beállítások
+* **Automata disztribúció felismerés**: Érzékeli a telepített Linux disztribúciót.
+* **EPEL repo automatikus kezelése**: Szükség esetén telepíti és konfigurálja az EPEL tárolót.
+* **Hibakezelés**: Ellenőrzi a parancsok sikerességét és megfelelő visszajelzést ad.
+* **Kompatibilitás**: Bizonyítottan működik minden major Enterprise Linux disztribúcióval.
+* **Moduláris szerkezet**: Minden funkció külön, jól kezelhető modulban található.
 
-SSH biztonság (root login, port változtatás)
+---
 
-4. Rendszeradminisztráció
-Felhasználókezelés (létrehozás, törlés, sudo jogok)
+## 📁 Használati területek
 
-Hostnév beállítás
+### 🏢 Vállalati környezet
+* Gyors szerver beállítás és üzembe helyezés.
+* Standardizált és konzisztens konfigurációk biztosítása.
+* Központi felügyelet előkészítése.
 
-Cockpit webes felület telepítése
+### 🎓 Oktatás és gyakorlás
+* Linux tanulás és gyakorlás rendszermérnöki feladatokhoz.
+* Rendszeradminisztrációs feladatok szimulációja.
 
-5. Monitorozás és diagnosztika
-Rendszerinformációk megjelenítése
+### 🔧 IT Support
+* Gyors hibaelhárítás és rendszer optimalizálás.
 
-Hálózati állapot ellenőrzés
+---
 
-Szolgáltatások kezelése
+## 🔒 Biztonsági és Egyedi Jellemzők
 
-🛠️ Technikai előnyök
-Automata disztribúció felismerés - Érzékeli a telepített Linux disztribúciót
+* **Root jogosultság ellenőrzés**: Csak megfelelő jogosultsággal futtatható.
+* **Biztonsági mentések**: Kritikus beállítások mentése a változtatások előtt.
+* **Naplózás**: Minden művelet nyomon követhető.
+* **Interaktív menürendszer**: Felhasználóbarát kezelőfelület és reszponzív design.
 
-EPEL repo automatikus kezelése - Szükség esetén telepíti és konfigurálja
+---
 
-Hibakezelés - Ellenőrzi a parancsok sikerességét
+## 📊 Teljesítmény és Skálázhatóság
 
-Kompatibilitás - Bizonyítottan működik minden major Enterprise Linux disztribúcióval
-
-📁 Használati területek
-🏢 Vállalati környezet
-Gyors szerver beállítás
-
-Standardizált konfigurációk
-
-Központi felügyelet
-
-🎓 Oktatás
-Linux tanulás és gyakorlás
-
-Rendszeradminisztrációs feladatok
-
-🔧 IT Support
-Gyors hibaelhárítás
-
-Rendszer optimalizálás
-
-🚀 Fejlesztési környezet
-Gyors development szerver beállítás
-
-Konszisztens konfigurációk
-
-🔒 Biztonsági jellemzők
-Root jogosultság ellenőrzés - Csak megfelelő jogosultsággal fut
-
-Biztonsági mentések - Kritikus beállítások mentése változtatások előtt
-
-Naplózás - Minden művelet nyomon követhető
-
-🌟 Egyedi tulajdonságok
-Interaktív menürendszer - Felhasználóbarát kezelőfelület
-
-Reszponzív design - Tiszta és áttekinthető kimenet
-
-Moduláris szerkezet - Minden funkció külön kezelhető
-
-Hibajavítás - Beépített diagnosztikai eszközök
-
-📊 Teljesítménybeli előnyök
-Gyors telepítés - Percék alatt beállítható egy teljes szerver
-
-Megbízható működés - Enterprise szintű stabilitás
-
-Skálázhatóság - Akár egy vagy akár több szerver konfigurálására is alkalmas
-
-Ez a szkript ideális választás minden olyan felhasználó számára, aki hatékonyan és biztonságosan szeretné kezelni Enterprise Linux alapú rendszereit anélkül, hogy mélyen elmerülne a parancssori eszközök használatában.
+* **Gyors telepítés**: Percék alatt beállítható egy teljes szerver.
+* **Megbízható működés**: Enterprise szintű stabilitás.
+* **Skálázhatóság**: Alkalmas egy vagy akár több szerver konfigurálására is.
