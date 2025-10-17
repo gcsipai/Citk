@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Univerzális CloudPanel és Mailcow Telepítő Szkript (Produkció Kész)
+# Univerzális CloudPanel és Mailcow Telepítő Szkript (beta2)
 # Támogatott verziók: Ubuntu 22.04 LTS és 24.04 LTS
 # Kompatibilitás: AWS EC2, KVM, VMware, és egyéb VPS/dedikált környezetek.
 #
@@ -16,7 +16,15 @@ C_MAGENTA='\033[0;35m'
 C_CYAN='\033[0;36m'
 C_NC='\033[0m' # No Color
 
+# Globális változók
+SERVER_HOSTNAME=""
+MAILCOW_HOSTNAME=""
+MAILCOW_HTTP_PORT="8081"
+MAILCOW_HTTPS_PORT="8444"
+MAILCOW_DIR="/opt/mailcow-dockerized"
+
 # 8. Log fájl beállítás - Minden kimenet mentése
+sudo mkdir -p /var/log
 exec > >(tee -a /var/log/cloudpanel-mailcow-install.log)
 exec 2>&1
 
@@ -47,10 +55,17 @@ PAUSE() {
 # =======================================================
 create_backup_point() {
     echo -e "\n${C_BLUE}--- Rendszer Állapot Mentése ---${C_NC}"
-    LOG "Készít egy tömörített mentést a kritikus konfigurációs mappákról (/etc/nginx, /etc/mysql, stb.)..."
-    sudo tar -czf /root/pre-install-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-        /etc/nginx /etc/mysql /etc/php /var/www /etc/ufw 2>/dev/null || true
-    SUCCESS "Backup készült: /root/pre-install-backup-*.tar.gz"
+    LOG "Készít egy tömörített mentést a kritikus konfigurációs mappákról..."
+    
+    local backup_file="/root/pre-install-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+    sudo tar -czf "$backup_file" \
+        /etc/nginx /etc/mysql /etc/php /var/www /etc/ufw /etc/hosts /etc/hostname 2>/dev/null || true
+    
+    if [ -f "$backup_file" ]; then
+        SUCCESS "Backup készült: $backup_file"
+    else
+        WARN "Backup készítése nem sikerült, de folytatjuk..."
+    fi
     PAUSE
 }
 
@@ -62,8 +77,15 @@ check_system_requirements() {
     
     # Ubuntu verzió ellenőrzés
     LOG "Ubuntu verzió ellenőrzése..."
-    if ! [[ $(lsb_release -rs) =~ ^(22\.04|24\.04) ]]; then
-        ERROR "Csak Ubuntu 22.04 LTS és 24.04 LTS támogatott!"
+    if ! command -v lsb_release >/dev/null 2>&1; then
+        LOG "lsb_release nem található, telepítjük..."
+        sudo apt update && sudo apt install -y lsb-release
+    fi
+    
+    local ubuntu_version
+    ubuntu_version=$(lsb_release -rs)
+    if ! [[ "$ubuntu_version" =~ ^(22\.04|24\.04) ]]; then
+        ERROR "Csak Ubuntu 22.04 LTS és 24.04 LTS támogatott! Talált: $ubuntu_version"
         exit 1
     fi
     SUCCESS "Ubuntu verzió OK: $(lsb_release -ds)"
@@ -101,8 +123,9 @@ check_environment_and_firewall() {
     echo -e "\n${C_BLUE}--- Környezet és Tűzfal Összegzés ---${C_NC}"
     
     # Publikus IP
+    LOG "Publikus IP cím lekérése..."
     local public_ip
-    public_ip=$(curl -s ifconfig.me)
+    public_ip=$(curl -s -4 ifconfig.me || curl -s -6 ifconfig.me || echo "ismeretlen")
     echo -e "Publikus IP: ${C_CYAN}$public_ip${C_NC}"
     
     # Cloud provider detektálás
@@ -113,28 +136,37 @@ check_environment_and_firewall() {
         SUCCESS "AWS nem detektálva (KVM/VPS/Dedikált valószínű)."
     fi
     
-    # Port teszt külsőleg (Timeout 5 másodperc)
-    WARN "Külső port elérhetőség ellenőrzése (Tűzfalon/Security Group-ban nyitva kell lennie!):"
-    local test_ports=("80" "443" "8443" "$MAILCOW_HTTPS_PORT" "25" "587")
-    for port in "${test_ports[@]}"; do
-        if timeout 5 bash -c "echo >/dev/tcp/$public_ip/$port" 2>/dev/null; then
-            echo -e "  Port $port: ${C_GREEN}NYITVA${C_NC}"
-        else
-            echo -e "  Port $port: ${C_RED}ZÁRVA${C_NC}"
-        fi
-    done
+    # Port teszt külsőleg (csak ha ismert az IP)
+    if [[ "$public_ip" != "ismeretlen" ]]; then
+        WARN "Külső port elérhetőség ellenőrzése (Tűzfalon/Security Group-ban nyitva kell lennie!):"
+        local test_ports=("80" "443" "8443" "$MAILCOW_HTTPS_PORT" "25" "587")
+        for port in "${test_ports[@]}"; do
+            if timeout 2 bash -c "echo >/dev/tcp/$public_ip/$port" 2>/dev/null; then
+                echo -e "  Port $port: ${C_GREEN}NYITVA${C_NC}"
+            else
+                echo -e "  Port $port: ${C_RED}ZÁRVA${C_NC}"
+            fi
+        done
+    else
+        WARN "Publikus IP nem érhető el, port teszt kihagyva."
+    fi
     
     # DNS beállítások ellenőrzése
-    LOG "DNS A rekord ellenőrzése a Mailcow domainhez..."
-    if dig +short "$MAILCOW_HOSTNAME" | grep -q "$public_ip"; then
-        SUCCESS "DNS A rekord helyes: $MAILCOW_HOSTNAME → $public_ip"
-    else
-        WARN "DNS A rekord HIBA! Nem mutat a szerver IP-re."
-        echo "  Beállítandó: $MAILCOW_HOSTNAME A $public_ip"
+    if [[ -n "$MAILCOW_HOSTNAME" && "$public_ip" != "ismeretlen" ]]; then
+        LOG "DNS A rekord ellenőrzése a Mailcow domainhez..."
+        if command -v dig >/dev/null 2>&1; then
+            if dig +short "$MAILCOW_HOSTNAME" | grep -q "$public_ip"; then
+                SUCCESS "DNS A rekord helyes: $MAILCOW_HOSTNAME → $public_ip"
+            else
+                WARN "DNS A rekord HIBA! Nem mutat a szerver IP-re."
+                echo "  Beállítandó: $MAILCOW_HOSTNAME A $public_ip"
+            fi
+        else
+            WARN "dig parancs nem elérhető, DNS ellenőrzés kihagyva."
+        fi
     fi
     PAUSE
 }
-
 
 # =======================================================
 # 1. TŰZFAL ELŐKÉSZÍTÉSE ÉS KIKAPCSOLÁSA
@@ -142,8 +174,11 @@ check_environment_and_firewall() {
 prepare_firewall() {
     echo -e "\n${C_BLUE}--- Tűzfal Előkészítés (UFW) ---${C_NC}"
     
-    LOG "Telepíti az UFW-t (Uncomplicated Firewall)..."
-    sudo apt install -y ufw
+    LOG "UFW telepítés ellenőrzése..."
+    if ! command -v ufw >/dev/null 2>&1; then
+        LOG "Telepíti az UFW-t (Uncomplicated Firewall)..."
+        sudo apt update && sudo apt install -y ufw
+    fi
 
     if sudo ufw status | grep -q "active"; then
         WARN "Az UFW tűzfal jelenleg aktív. A zökkenőmentes telepítés érdekében ${C_RED}ideiglenesen kikapcsoljuk${C_NC}."
@@ -154,7 +189,6 @@ prepare_firewall() {
     fi
     
     WARN "FIGYELEM: AWS-nél ne feledd a Security Groupok beállítását!"
-    
     PAUSE
 }
 
@@ -171,6 +205,8 @@ input_config() {
         exit 1
     fi
     sudo hostnamectl set-hostname "$SERVER_HOSTNAME"
+    # Hostname hozzáadása a hosts fájlhoz
+    echo "127.0.0.1 $SERVER_HOSTNAME" | sudo tee -a /etc/hosts >/dev/null
     SUCCESS "A szerver Hostname beállítva: $SERVER_HOSTNAME"
 
     # Mailcow Hostname
@@ -200,13 +236,13 @@ input_config() {
 install_cloudpanel() {
     echo -e "\n${C_BLUE}--- CloudPanel Telepítése (3. lépés) ---${C_NC}"
     
-    LOG "CloudPanel telepítő letöltése és ellenőrzése..."
-    
-    # Telepíti a szükséges előfeltételeket
+    LOG "Előfeltételek telepítése..."
+    sudo apt update
     sudo apt install -y curl wget git lsb-release ca-certificates
     
+    LOG "CloudPanel telepítő letöltése és futtatása..."
     # Hivatalos telepítő futtatása és ellenőrzése
-    if ! curl -sS https://installer.cloudpanel.io/ce/v2/install.sh | sudo bash; then
+    if ! curl -sS https://installer.cloudpanel.io/ce/v2/install.sh | sudo CLOUD_PANEL_BRANCH=stable bash; then
         ERROR "CloudPanel telepítése sikertelen! Nézd meg a log fájlt!"
         ERROR "Hibakeresés: sudo tail -f /var/log/cloudpanel/install.log"
         exit 1
@@ -217,8 +253,9 @@ install_cloudpanel() {
     
     # NGINX ellenőrzése és újraindítása, ha szükséges
     if ! systemctl is-active --quiet nginx; then
-        WARN "NGINX nem fut (a CloudPanel alap webkiszolgálója), újraindítás..."
+        WARN "NGINX nem fut, újraindítás..."
         sudo systemctl restart nginx
+        sleep 5
     fi
     
     SUCCESS "CloudPanel telepítés befejezve!"
@@ -231,24 +268,42 @@ install_cloudpanel() {
 install_mailcow() {
     echo -e "\n${C_BLUE}--- Docker és Mailcow Telepítése (4. lépés) ---${C_NC}"
     
-    MAILCOW_DIR="/opt/mailcow-dockerized"
-
     # Docker telepítés
-    LOG "Telepíti a Dockert és a Docker Compose-t..."
-    sudo apt install -y apt-transport-https gnupg docker-buildx-plugin docker-compose-plugin
+    LOG "Docker telepítés előkészítése..."
+    sudo apt update
+    sudo apt install -y apt-transport-https ca-certificates curl gnupg
+    
+    LOG "Docker hivatalos repository hozzáadása..."
     sudo install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt update -y
-    sudo apt install -y docker-ce docker-ce-cli containerd.io
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    LOG "Docker telepítése..."
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    
+    # Docker szolgáltatás indítása
+    sudo systemctl enable docker
+    sudo systemctl start docker
+    
+    # Current user hozzáadása docker csoporthoz
+    sudo usermod -aG docker $USER
+    
     SUCCESS "Docker telepítve."
 
     # Mailcow letöltése
-    LOG "Letölti a Mailcow forráskódját..."
+    LOG "Mailcow letöltése..."
     sudo mkdir -p "$MAILCOW_DIR"
-    sudo git clone https://github.com/mailcow/mailcow-dockerized "$MAILCOW_DIR"
+    if [ ! -d "$MAILCOW_DIR/.git" ]; then
+        sudo git clone https://github.com/mailcow/mailcow-dockerized "$MAILCOW_DIR"
+    else
+        LOG "Mailcow már létezik, frissítés..."
+        cd "$MAILCOW_DIR"
+        sudo git pull
+    fi
     
-    # 4. Mailcow konfiguráció automatizálása
+    # Mailcow konfiguráció automatizálása
     LOG "Mailcow konfiguráció automatikus beállítása ($MAILCOW_HOSTNAME)..."
     cd "$MAILCOW_DIR" || { ERROR "Hiba a Mailcow könyvtárba váltásnál."; exit 1; }
     
@@ -261,15 +316,17 @@ install_mailcow() {
     fi
     
     # Portok beállítása
-    LOG "Beállítja az egyedi webes portokat a mailcow.conf-ban..."
-    sudo sed -i "s/^MAILCOW_HOSTNAME=.*/MAILCOW_HOSTNAME=$MAILCOW_HOSTNAME/" mailcow.conf
+    LOG "Beállítja az egyedi webes portokat..."
     sudo sed -i "s/^HTTP_PORT=.*/HTTP_PORT=$MAILCOW_HTTP_PORT/" mailcow.conf
     sudo sed -i "s/^HTTPS_PORT=.*/HTTPS_PORT=$MAILCOW_HTTPS_PORT/" mailcow.conf
 
     # Mailcow indítása
-    LOG "Indítja a Mailcow konténereket..."
+    LOG "Mailcow konténerek indítása..."
     sudo docker compose pull
     sudo docker compose up -d
+    
+    # Várakozás a konténerek elindulására
+    sleep 30
     
     SUCCESS "Mailcow telepítés és indítás kész!"
     PAUSE
@@ -281,35 +338,39 @@ install_mailcow() {
 enable_firewall() {
     echo -e "\n${C_BLUE}--- Tűzfal Végleges Bekapcsolása (5. lépés) ---${C_NC}"
     
-    LOG "Törli a meglévő UFW szabályokat és beállítja az alapértelmezett beállításokat (tilt minden bejövő forgalmat)."
+    LOG "UFW alaphelyzetbe állítása..."
     sudo ufw --force reset
     sudo ufw default deny incoming
     sudo ufw default allow outgoing
     
     # CloudPanel és Alapvető Portok
-    LOG "Engedélyezi a CloudPanel és az alapvető rendszerszolgáltatások portjait..."
+    LOG "Alapvető portok engedélyezése..."
     sudo ufw allow 22/tcp comment 'SSH - Rendszer'
     sudo ufw allow 80/tcp comment 'HTTP - CloudPanel Web'
     sudo ufw allow 443/tcp comment 'HTTPS - CloudPanel Web'
     sudo ufw allow 8443/tcp comment 'CloudPanel Admin Felület'
 
     # Mailcow Protokollok és Portok
-    LOG "Engedélyezi a Mailcow futó szolgáltatásainak portjait (webes és levelezési):"
-    
-    # Mailcow webes portok
+    LOG "Mailcow portok engedélyezése..."
     sudo ufw allow "$MAILCOW_HTTP_PORT"/tcp comment 'Mailcow HTTP Web Interface'
     sudo ufw allow "$MAILCOW_HTTPS_PORT"/tcp comment 'Mailcow HTTPS Web Interface'
 
-    # Mailcow levelezési portok (protokollok)
-    MAIL_PORTS=("25/tcp" "143/tcp" "110/tcp" "587/tcp" "993/tcp" "995/tcp")
-    for port in "${MAIL_PORTS[@]}"; do
+    # Mailcow levelezési portok
+    local mail_ports=("25/tcp" "143/tcp" "110/tcp" "587/tcp" "993/tcp" "995/tcp")
+    for port in "${mail_ports[@]}"; do
         sudo ufw allow "$port" comment "Mailcow Protocol Port"
     done
     
     # Tűzfal végleges bekapcsolása
     sudo ufw --force enable
     
-    SUCCESS "UFW tűzfal BEkapcsolva! Összes szükséges port engedélyezve."
+    # Állapot ellenőrzése
+    if sudo ufw status | grep -q "active"; then
+        SUCCESS "UFW tűzfal BEkapcsolva! Összes szükséges port engedélyezve."
+        sudo ufw status verbose
+    else
+        ERROR "UFW tűzfal nem sikerült bekapcsolni!"
+    fi
     PAUSE
 }
 
@@ -319,26 +380,30 @@ enable_firewall() {
 verify_services() {
     echo -e "\n${C_BLUE}--- Szolgáltatások állapotának ellenőrzése (6. lépés) ---${C_NC}"
     
-    LOG "Ellenőrzi a CloudPanel fő szolgáltatásait (systemctl):"
-    local services=("nginx" "mariadb" "php8.2-fpm")
+    LOG "CloudPanel szolgáltatások ellenőrzése..."
+    local services=("nginx" "mariadb" "php8.2-fpm" "php8.3-fpm")
     for service in "${services[@]}"; do
-        if systemctl is-active --quiet "$service"; then
+        if systemctl is-active --quiet "$service" 2>/dev/null; then
             SUCCESS "$service - FUT"
         else
-            ERROR "$service - NEM FUT (CloudPanel hiba?)"
+            WARN "$service - NEM FUT (lehet, hogy nincs telepítve)"
         fi
     done
     
     # Docker container állapot
-    LOG "Mailcow Docker konténerek állapota (docker compose ps):"
-    sudo docker compose ps
+    if command -v docker >/dev/null 2>&1 && [ -d "$MAILCOW_DIR" ]; then
+        LOG "Mailcow Docker konténerek állapota:"
+        cd "$MAILCOW_DIR" && sudo docker compose ps
+    else
+        WARN "Docker vagy Mailcow nem elérhető a konténer ellenőrzéshez"
+    fi
     
-    # CloudPanel elérhetőség ellenőrzése (lokális port 80)
-    LOG "CloudPanel lokális webes elérhetőség ellenőrzése..."
+    # CloudPanel elérhetőség ellenőrzése
+    LOG "CloudPanel webes elérhetőség ellenőrzése..."
     if curl -s -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q "200"; then
         SUCCESS "CloudPanel web felület elérhető (Port 80)"
     else
-        ERROR "CloudPanel web felület NEM elérhető (Port 80) - NGINX hiba."
+        WARN "CloudPanel web felület NEM elérhető (Port 80) - lehet, hogy még indul"
     fi
     PAUSE
 }
@@ -346,14 +411,24 @@ verify_services() {
 # =======================================================
 # 6. TESZT ÉS KONZOL MENÜ
 # =======================================================
-
 mailcow_bash_console() {
     echo -e "\n${C_YELLOW}--- Mailcow Konzol Belépés ---${C_NC}"
-    WARN "Ez a funkció bevisz a Mailcow egyik fő konténerébe (Bash shell), ahol a Docker-en belüli adminisztrációt végezheted (pl. mailcow-cli)."
+    WARN "Ez a funkció bevisz a Mailcow egyik fő konténerébe (Bash shell)."
     LOG "A konténer elhagyásához írd be, hogy ${C_RED}exit${C_NC}."
     
+    if [ ! -d "$MAILCOW_DIR" ]; then
+        ERROR "Mailcow könyvtár nem található: $MAILCOW_DIR"
+        PAUSE
+        return
+    fi
+    
     cd "$MAILCOW_DIR" || { ERROR "Hiba a Mailcow könyvtárban."; PAUSE; return; }
-    sudo docker compose exec dovecot-mailcow bash
+    
+    if sudo docker compose ps | grep -q "Up"; then
+        sudo docker compose exec dovecot-mailcow bash
+    else
+        ERROR "Mailcow konténerek nem futnak!"
+    fi
     
     echo -e "\n${C_GREEN}Konzol elhagyva.${C_NC}"
     PAUSE
@@ -364,14 +439,15 @@ test_menu() {
         clear
         echo -e "${C_BLUE}--- Telepített Szolgáltatások Tesztmenüje (7. lépés) ---${C_NC}"
         
-        IP_ADDRESS=$(curl -s ifconfig.me)
+        local ip_address
+        ip_address=$(curl -s -4 ifconfig.me || curl -s -6 ifconfig.me || echo "ismeretlen")
         
         echo -e "\n${C_MAGENTA}Szerver Adatok (Elérhetőségek):${C_NC}"
-        echo "  CloudPanel Admin: ${C_GREEN}https://$IP_ADDRESS:8443${C_NC}"
+        echo "  CloudPanel Admin: ${C_GREEN}https://$ip_address:8443${C_NC}"
         echo "  Mailcow Admin:    ${C_RED}https://$MAILCOW_HOSTNAME:$MAILCOW_HTTPS_PORT${C_NC} (admin / moohoo)"
         echo -e "\n${C_MAGENTA}Menüpontok:${C_NC}"
         echo "1) Portok és Szolgáltatások Állapot Ellenőrzése"
-        echo "2) AWS/DNS/Külső Hálózat Összegzés (check_environment_and_firewall)"
+        echo "2) AWS/DNS/Külső Hálózat Összegzés"
         echo "3) ${C_CYAN}Mailcow Konzol Belépés (Docker Bash Shell)${C_NC}"
         echo "4) Kilépés a szkriptből (Befejezve)"
         
@@ -380,11 +456,9 @@ test_menu() {
         case $choice in
             1)
                 verify_services
-                PAUSE
                 ;;
             2)
                 check_environment_and_firewall
-                PAUSE
                 ;;
             3)
                 mailcow_bash_console
@@ -401,7 +475,6 @@ test_menu() {
     done
 }
 
-
 # =======================================================
 # FŐ PROGRAM FUTTATÁSA (Javított sorrend)
 # =======================================================
@@ -411,23 +484,30 @@ main() {
     echo -e "${C_MAGENTA}# CLOUDPANEL ÉS MAILCOW UNIVERZÁLIS TELEPÍTÉS #${C_NC}"
     echo -e "${C_MAGENTA}#############################################################${C_NC}"
     
+    # Root jogosultság ellenőrzése
+    if [ "$EUID" -ne 0 ]; then
+        ERROR "Root jogosultság szükséges! Futtasd sudo-val: sudo bash $0"
+        exit 1
+    fi
+    
     # Előkészületek
     create_backup_point
-    check_system_requirements # Függőség ellenőrzés
+    check_system_requirements
     
-    # Konfiguráció és Tűzfal (KI)
-    prepare_firewall # Tűzfal kikapcsolása
-    input_config # Adatbekérés és Hostname beállítás
+    # Konfiguráció és Tűzfal
+    prepare_firewall
+    input_config
 
     # Telepítések
-    install_cloudpanel # CloudPanel telepítése
-    install_mailcow # Mailcow telepítése egyéni portokkal
+    install_cloudpanel
+    install_mailcow
 
     # Lezárás és Ellenőrzés
-    enable_firewall # Tűzfal bekapcsolása futó protokollokkal
-    verify_services # Szolgáltatások (CloudPanel/Docker) ellenőrzése
+    enable_firewall
+    verify_services
     
-    test_menu # Teszt menü futtatása (a szkript itt zárul)
+    test_menu
 }
 
-main
+# Fő program indítása
+main "$@"
