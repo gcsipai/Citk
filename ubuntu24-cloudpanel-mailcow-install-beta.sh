@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Univerzális CloudPanel és Mailcow Telepítő Szkript (beta2)
+# Univerzális CloudPanel és Mailcow Telepítő Szkript (beta3)
 # Támogatott verziók: Ubuntu 22.04 LTS és 24.04 LTS
 # Kompatibilitás: AWS EC2, KVM, VMware, és egyéb VPS/dedikált környezetek.
 #
@@ -48,6 +48,50 @@ PAUSE() {
     echo
     read -rp "Nyomj ENTER-t a folytatáshoz..."
     echo
+}
+
+# =======================================================
+# ÚJ: PORT HASZNÁLATI ÖSSZEGZÉS
+# =======================================================
+show_port_summary() {
+    echo -e "\n${C_BLUE}╔════════════════════════════════════════════════════════════╗${C_NC}"
+    echo -e "${C_BLUE}║               PORT HASZNÁLATI ÖSSZEGZÉS                   ║${C_NC}"
+    echo -e "${C_BLUE}╠════════════════════════════════════════════════════════════╣${C_NC}"
+    
+    echo -e "${C_MAGENTA}📡 CLOUDPANEL PORTOK:${C_NC}"
+    echo -e "  ┌─ Weboldalak (HTTP/HTTPS)"
+    echo -e "  │   ${C_GREEN}80/tcp${C_NC}   - HTTP forgalom"
+    echo -e "  │   ${C_GREEN}443/tcp${C_NC}  - HTTPS forgalom"
+    echo -e "  └─ ${C_GREEN}8443/tcp${C_NC} - Admin felület"
+    
+    echo -e "\n${C_MAGENTA}📧 MAILCOW PORTOK:${C_NC}"
+    echo -e "  ┌─ Webes felület"
+    echo -e "  │   ${C_RED}${MAILCOW_HTTP_PORT}/tcp${C_NC}  - Mailcow HTTP"
+    echo -e "  │   ${C_RED}${MAILCOW_HTTPS_PORT}/tcp${C_NC} - Mailcow HTTPS"
+    echo -e "  ├─ Levelezési protokollok"
+    echo -e "  │   ${C_CYAN}25/tcp${C_NC}   - SMTP (Mail küldés)"
+    echo -e "  │   ${C_CYAN}587/tcp${C_NC}  - SMTP Submission (Titkosított küldés)"
+    echo -e "  ├─ Mail fogadás (POP3/IMAP)"
+    echo -e "  │   ${C_CYAN}110/tcp${C_NC}  - POP3 (Régi postafiók protokoll)"
+    echo -e "  │   ${C_CYAN}143/tcp${C_NC}  - IMAP (Mail szinkronizálás)"
+    echo -e "  └─ Titkosított mail protokollok"
+    echo -e "      ${C_CYAN}993/tcp${C_NC}  - IMAPS (Titkosított IMAP)"
+    echo -e "      ${C_CYAN}995/tcp${C_NC}  - POP3S (Titkosított POP3)"
+    
+    echo -e "\n${C_MAGENTA}🔐 RENDSZER PORTOK:${C_NC}"
+    echo -e "  ${C_YELLOW}22/tcp${C_NC}    - SSH távoli adminisztráció"
+    
+    echo -e "\n${C_MAGENTA}🌐 NYITVA KELL LEGYEN A TŰZFALON / SECURITY GROUP-BAN:${C_NC}"
+    echo -e "  Bejövő forgalom: ${C_GREEN}22, 80, 443, 8443, ${MAILCOW_HTTPS_PORT}, 25, 587, 993${C_NC}"
+    
+    echo -e "${C_BLUE}╚════════════════════════════════════════════════════════════╝${C_NC}"
+    
+    echo -e "\n${C_YELLOW}⚠️  FONTOS:${C_NC}"
+    echo -e "  • AWS EC2 esetén a Security Group-ban nyisd meg ezeket a portokat"
+    echo -e "  • KVM/VPS esetén a tűzfal konfigurációját a szkript elvégzi"
+    echo -e "  • Mailcow a ${C_RED}${MAILCOW_HTTPS_PORT}${C_NC} porton érhető el a CloudPanel miatt"
+    
+    PAUSE
 }
 
 # =======================================================
@@ -139,7 +183,7 @@ check_environment_and_firewall() {
     # Port teszt külsőleg (csak ha ismert az IP)
     if [[ "$public_ip" != "ismeretlen" ]]; then
         WARN "Külső port elérhetőség ellenőrzése (Tűzfalon/Security Group-ban nyitva kell lennie!):"
-        local test_ports=("80" "443" "8443" "$MAILCOW_HTTPS_PORT" "25" "587")
+        local test_ports=("22" "80" "443" "8443" "$MAILCOW_HTTPS_PORT" "25" "587" "993")
         for port in "${test_ports[@]}"; do
             if timeout 2 bash -c "echo >/dev/tcp/$public_ip/$port" 2>/dev/null; then
                 echo -e "  Port $port: ${C_GREEN}NYITVA${C_NC}"
@@ -227,7 +271,9 @@ input_config() {
     echo "  - CloudPanel Weboldalak: ${C_GREEN}80/443${C_NC}"
     echo "  - CloudPanel Admin: ${C_GREEN}8443${C_NC}"
     echo "  - Mailcow Admin: ${C_RED}$MAILCOW_HTTPS_PORT${C_NC}"
-    PAUSE
+    
+    # Port összegzés megjelenítése
+    show_port_summary
 }
 
 # =======================================================
@@ -338,6 +384,9 @@ install_mailcow() {
 enable_firewall() {
     echo -e "\n${C_BLUE}--- Tűzfal Végleges Bekapcsolása (5. lépés) ---${C_NC}"
     
+    LOG "Port összegzés megjelenítése a tűzfal beállítás előtt..."
+    show_port_summary
+    
     LOG "UFW alaphelyzetbe állítása..."
     sudo ufw --force reset
     sudo ufw default deny incoming
@@ -367,7 +416,8 @@ enable_firewall() {
     # Állapot ellenőrzése
     if sudo ufw status | grep -q "active"; then
         SUCCESS "UFW tűzfal BEkapcsolva! Összes szükséges port engedélyezve."
-        sudo ufw status verbose
+        echo -e "\n${C_GREEN}Aktív UFW szabályok:${C_NC}"
+        sudo ufw status numbered
     else
         ERROR "UFW tűzfal nem sikerült bekapcsolni!"
     fi
@@ -405,7 +455,10 @@ verify_services() {
     else
         WARN "CloudPanel web felület NEM elérhető (Port 80) - lehet, hogy még indul"
     fi
-    PAUSE
+    
+    # Port összegzés utolsó megjelenítése
+    echo -e "\n${C_BLUE}=== VÉGSŐ PORT ÖSSZEGZÉS ===${C_NC}"
+    show_port_summary
 }
 
 # =======================================================
@@ -449,9 +502,10 @@ test_menu() {
         echo "1) Portok és Szolgáltatások Állapot Ellenőrzése"
         echo "2) AWS/DNS/Külső Hálózat Összegzés"
         echo "3) ${C_CYAN}Mailcow Konzol Belépés (Docker Bash Shell)${C_NC}"
-        echo "4) Kilépés a szkriptből (Befejezve)"
+        echo "4) Port Használati Összegzés Megjelenítése"
+        echo "5) Kilépés a szkriptből (Befejezve)"
         
-        read -rp "Választás (1-4): " choice
+        read -rp "Választás (1-5): " choice
         
         case $choice in
             1)
@@ -464,6 +518,9 @@ test_menu() {
                 mailcow_bash_console
                 ;;
             4)
+                show_port_summary
+                ;;
+            5)
                 echo -e "\n${C_GREEN}Telepítés befejezve. Köszönöm, hogy a szkriptet használtad!${C_NC}"
                 exit 0
                 ;;
