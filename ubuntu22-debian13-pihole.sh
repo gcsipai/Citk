@@ -41,12 +41,11 @@ check_root() {
 
 # Tűzfal (UFW) és Portok ellenőrzése/beállítása
 check_firewall() {
-    echo -e "\n**--- Tűzfal (UFW) és Portok Ellenőrzése ---**"
+    echo -e "\n**--- 3. LÉPÉS: Tűzfal (UFW) és Portok Ellenőrzése ---**"
     
     # Ellenőrizzük, hogy az ufw telepítve van-e
     if ! command -v ufw &> /dev/null; then
-        echo -e "${ORANGE}FIGYELMEZTETÉS:${RESET} Az UFW tűzfal nincs telepítve, de most telepíteni fogjuk."
-        # A telepítés az 1. lépésben (csomagtelepítés) megtörténik.
+        echo -e "${ORANGE}FIGYELMEZTETÉS:${RESET} Az UFW tűzfal nincs telepítve, de a korábbi lépésben telepítve lett."
         return 0
     fi
     
@@ -72,7 +71,7 @@ check_firewall() {
 
 # Időzóna beállítása Europe/Budapest-re
 set_timezone() {
-    echo -e "\n**--- Időzóna beállítása (Europe/Budapest) és Időszinkronizálás ---**"
+    echo -e "\n**--- 2. LÉPÉS: Időzóna beállítása (Europe/Budapest) és Időszinkronizálás ---**"
     
     # timedatectl használata (modern rendszerek)
     if command -v timedatectl >/dev/null 2>&1; then
@@ -129,6 +128,56 @@ handle_locks() {
     echo "APT/DPKG zárolások sikeresen feloldva."
 }
 
+# Portütközés feloldása az 53-as porton
+resolve_port_53_conflict() {
+    echo -e "\n**--- 4. LÉPÉS: Portütközés Ellenőrzése és Javítása (53-as port) ---**"
+    
+    # Ellenőrizzük, hogy az 53-as port foglalt-e (UDP és TCP)
+    local LISTENER=$(sudo netstat -tuln | grep ':53' | awk '/0.0.0.0|127.0.0.53/ {print $NF}' | head -n1)
+    
+    if [ -z "$LISTENER" ]; then
+        echo -e "${GREEN}53-as port szabad. Nincs szükség beavatkozásra.${RESET}"
+        return 0
+    fi
+    
+    # Azonosítjuk a folyamatot lsof segítségével (lekérjük a parancs nevét)
+    local PROCESS_INFO=$(sudo lsof -i :53 -n -P | grep LISTEN | awk '{print $1}' | head -n1)
+    
+    if [[ "$PROCESS_INFO" == "systemd-r" || "$PROCESS_INFO" == "systemd-resolved" ]]; then
+        echo -e "${ORANGE}FIGYELMEZTETÉS:${RESET} systemd-resolved (${PROCESS_INFO}) foglalja az 53-as portot. Letiltás és leállítás..."
+        
+        # Leállítás és letiltás
+        sudo systemctl stop systemd-resolved || true
+        sudo systemctl disable systemd-resolved || true
+        
+        echo -e "${GREEN}systemd-resolved sikeresen leállítva/letiltva.${RESET}"
+        
+    elif [[ "$PROCESS_INFO" == "dnsmasq" || "$PROCESS_INFO" == "pihole-FTL" ]]; then
+        echo -e "${ORANGE}FIGYELMEZTETÉS:${RESET} Egy korábbi dnsmasq/Pi-hole folyamat fut az 53-as porton. Megpróbáljuk leállítani..."
+        # Leállítjuk a pihole-FTL szolgáltatást, ami dnsmasq-t futtat
+        sudo systemctl stop pihole-FTL || true
+        
+        # Még egyszer ellenőrizzük, és ha még mindig fut, megpróbáljuk kilőni a PID alapján.
+        local PID_TO_KILL=$(sudo lsof -i :53 -n -P | grep LISTEN | awk '{print $2}' | head -n1)
+        if [ -n "$PID_TO_KILL" ]; then
+             sudo kill -9 "$PID_TO_KILL" || true
+             echo -e "${GREEN}A konfliktust okozó folyamat leállítva (PID $PID_TO_KILL).${RESET}"
+        fi
+        
+    else
+        echo -e "${RED}FATÁLIS HIBA:${RESET} Ismeretlen szolgáltatás (${PROCESS_INFO}) foglalja az 53-as portot."
+        error_exit "Ismeretlen portütközés az 53-as porton. Kézi vizsgálat szükséges!"
+    fi
+    
+    # Végső ellenőrzés
+    sleep 2 # Adjunk időt a folyamat leállításának
+    if [ -n "$(sudo netstat -tuln | grep ':53' | awk '/0.0.0.0|127.0.0.53/ {print $NF}' | head -n1)" ]; then
+        error_exit "Az 53-as port még a javítás után is foglalt. Manuális beavatkozás szükséges."
+    fi
+    echo -e "${GREEN}A 53-as port szabad a Pi-hole telepítéséhez.${RESET}"
+}
+
+
 # --- FŐ PROGRAM ---
 check_root # Ellenőrizzük, hogy a szkript root jogosultságokkal fut-e.
 
@@ -170,7 +219,7 @@ fi
 
 # 0d. VÉGSŐ MEGERŐSÍTÉS A TELEPÍTÉS ELŐTT
 echo -e "\n${GREEN}_!!! KÉSZEN ÁLLUNK A TELEPÍTÉSRE !!!_${RESET}"
-echo -e "A szkript most: 1. Frissíti a rendszert. 2. Beállítja az időzónát. 3. Telepíti a Pi-hole-t. 4. Konfigurálja a tűzfalat (UFW)."
+echo -e "A szkript most: 1. Frissíti a rendszert. 2. Beállítja az időzónát. 3. Konfigurálja az UFW-t. 4. Feloldja a portütközést. 5. Telepíti a Pi-hole-t."
 read -r -p "Meggyőződött a statikus IP-címről és szeretné elindítani a Pi-hole telepítését? (i/n): " -n 1 -r FINAL_REPLY
 echo 
 if [[ ! $FINAL_REPLY =~ ^[Ii]$ ]]; then
@@ -193,8 +242,8 @@ apt autoremove -y
 
 echo "--- A Pi-hole telepítéséhez szükséges csomagok telepítése (curl, ufw) ---"
 # Telepítjük a curl-t a Pi-hole letöltéséhez és az ufw-t a tűzfal kezeléséhez
-if ! apt install -y curl ufw; then
-    error_exit "A curl vagy ufw telepítése sikertelen! Ellenőrizze a csomagtárakat."
+if ! apt install -y curl ufw lsof net-tools; then
+    error_exit "A szükséges csomagok (curl, ufw, lsof, net-tools) telepítése sikertelen!"
 fi
 
 # --- 2. LÉPÉS: IDŐSZINKRONIZÁLÁS ÉS IDŐZÓNA BEÁLLÍTÁSA ---
@@ -203,16 +252,18 @@ set_timezone
 # --- 3. LÉPÉS: TŰZFAL BEÁLLÍTÁSA ---
 check_firewall # Ellenőrizzük és konfiguráljuk az UFW-t a Pi-hole portokhoz
 
-# --- 4. LÉPÉS: PI-HOLE TELEPÍTÉS ---
-echo -e "\n**--- 4. LÉPÉS: Pi-hole telepítés indítása automatikus módban ---**"
+# --- 4. LÉPÉS: PORTÜTKÖZÉS ELHÁRÍTÁSA ---
+resolve_port_53_conflict # Javítja az 53-as port konfliktusát (systemd-resolved)
+
+# --- 5. LÉPÉS: PI-HOLE TELEPÍTÉS ---
+echo -e "\n**--- 5. LÉPÉS: Pi-hole telepítés indítása automatikus módban ---**"
 
 # Letöltjük a hivatalos telepítő szkriptet és futtatjuk a bash -s -- --unattended szintaxissal.
-# Az "-s" jelzi a bash-nek, hogy a bemenetet stdin-ről olvassa, a "--" utáni opciók pedig a Pi-hole szkriptnek szólnak.
 if ! curl -sSL https://install.pi-hole.net | bash -s -- --unattended; then
     error_exit "A Pi-hole telepítése sikertelen! Valószínűleg a telepítő szkript futott hibára."
 fi
 
-# --- 5. LÉPÉS: TELEPÍTÉS UTÁNI ÖSSZEFOGLALÓ ---
+# --- 6. LÉPÉS: TELEPÍTÉS UTÁNI ÖSSZEFOGLALÓ ---
 echo "====================================================="
 echo -e "**Pi-hole TELEPÍTÉS SIKERES! (DevOFALL)**"
 echo "====================================================="
