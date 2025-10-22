@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script: install_pihole.sh
+# Script: ubuntu22-debian13-pihole.sh
 # Készítette: DevOFALL
 # Cél: Pi-hole telepítése Debian/Ubuntu rendszereken, automatikus konfigurációval, hibatűréssel, tűzfal- és jelszókezeléssel.
 
